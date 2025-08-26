@@ -1,4 +1,7 @@
-﻿Console.WriteLine(@"
+﻿using IoniConnect;
+using IoniConnect.Models;
+
+Console.WriteLine(@"
 =========== checking the connection/status ============
 
 connect the API and print some infos...
@@ -12,7 +15,7 @@ var api = new IoniConnect.Http.APIConnector("http://localhost:5066");
 // just a placeholders for later use...
 HttpResponseMessage r;
 Newtonsoft.Json.Linq.JObject jObject;
-string href;
+string href = "";
 
 // check an endpoint that's always available to see if we're connected:
 var status = api.GetJson("/api/status");
@@ -28,7 +31,6 @@ Console.WriteLine(new
 {
     SerialNr = status["instrumentSerialNr"].ToObject<string>(),
     Version = status["version"].ToObject<string>(),
-    DiskPercentFull = status["_embedded"]["disks"][0]["percentFull"].ToObject<string>(),
 });
 
 
@@ -170,9 +172,11 @@ we POST a new element in the list of measurements, which points to
 a 'RecipeDirectory' containing the configuration. They are exclusively
 found in 'C:/Ionicon/AME/Recipes/' and must contain a 'Composition[.json]'
 file and a '*.ionipt' peaktable.
+
+Let's ask the API for a list of valid paths:
 ");
-var recipes = Directory
-    .EnumerateDirectories(@"C:\Ionicon\AME\Recipes")
+var recipes = new ReadOnlyEmbeddedCollection<IndexedFile>(api, "/api/recipes")
+    .Select(file => file.Path)
     .ToList();
 
 foreach (var choice in recipes.Select((path, i) => $"[{i}]: " + path))
@@ -270,6 +274,45 @@ if (jObject.HasValues)
     Console.WriteLine($"`PUT {href}` returned [{r.StatusCode}]");
 }
 
+/////////////////////////////////////////////////////////
+
+Console.WriteLine(@"
+=========== download the result files and report ============
+
+The results of the measurement are saved in directories usually
+such as D:\AMEData\<current datetime>, where each new-folder-action
+would create a new directory. These are attached as the /results-
+endpoint for a given /api/measurement/:id that we just obtained.
+
+We will now navigate to the /api/measurement/X/results/last, 
+download all files as a ZIP-archive and get a report for the
+top 5 TVOCs in XML format...
+");
+if (string.IsNullOrEmpty(href))  // should have been set to /api/measurement/<current> above...
+{
+    jObject = api.GetJson("/api/measurements/last");
+
+    href = jObject["_links"]["self"]["href"].ToObject<string>();
+}
+var results = new ReadOnlyEmbeddedCollection<IndexedFile>(api, href + "/results")
+    .Select(file => file.Name)
+    .ToList();
+
+jObject = api.GetJson(href + "/results/last");  // href should be "/api/measurements/X"
+
+if (jObject.HasValues)
+{
+    href = jObject["_links"]["self"]["href"].ToObject<string>();  // href should be "/api/measurements/X/results/Y"
+
+    api.GetFile(href + "/download", query: "exclude=*.h5", "./result.zip");  // use "exclude=*.h5&exclude=*.tsv" for more exclusions
+
+    Console.WriteLine("Result files saved as " + Directory.GetCurrentDirectory() + "\\result.zip");
+
+    var xml = api.GetContent(href + "/report");
+
+    Console.Write(xml.Substring(0, 200));
+    Console.WriteLine("...");
+}
 
 /////////////////////////////////////////////////////////
 
