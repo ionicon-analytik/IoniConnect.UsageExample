@@ -1,4 +1,29 @@
-﻿using IoniConnect;
+﻿////////////////////////////////////////////////////////////////
+//                                                            //
+// IoniConnect.UsageExample                                   //
+// ------------------------                                   //
+//                                                            //
+// Showcase, demonstration and documentation by example       //
+// of the Ionicon AME HTTP-API.                               //
+//                                                            //
+// You should have received a copy of the IoniConnect.nupgk   //
+// NuGet-package together with this source code.              //
+// This requires the IoniConnect.API to run on port 5066.     //
+// The API version is displayed in the example /api/status    //
+// below and should conform to the NuGet package version.     //
+//                                                            //
+// Author:                                                    //
+//  moritz.koenemann@ionicon.com                              //
+//  software@ionicon.com                                      //
+//                                                            //
+// Version history:                                           //
+//                                                            //
+// v3 - 28.Aug 2025                                           //
+//  * add example 'download the result files and report'      //
+//  * update IoniConnect.nupgk v1.0.7                         //
+//                                                            //
+////////////////////////////////////////////////////////////////
+using IoniConnect;
 using IoniConnect.Models;
 
 Console.WriteLine(@"
