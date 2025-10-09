@@ -18,6 +18,9 @@
 //                                                            //
 // Version history:                                           //
 //                                                            //
+// v4 -  7.Oct 2025                                           //
+//  * changed: use a PATCH request to stop a measurement      //
+//                                                            //
 // v3 - 28.Aug 2025                                           //
 //  * add example 'download the result files and report'      //
 //  * update IoniConnect.nupgk v1.0.7                         //
@@ -294,7 +297,7 @@ if (jObject.HasValues)
     // meaning the resolved endpoint to our request, is ALWAYS provided:
     href = jObject["_links"]["self"]["href"].ToObject<string>();
 
-    r = api.SendJson(HttpMethod.Put, href, new { IsRunning = false });
+    r = api.SendJson(new HttpMethod("PATCH"), href, new { IsRunning = false });
 
     Console.WriteLine($"`PUT {href}` returned [{r.StatusCode}]");
 }
