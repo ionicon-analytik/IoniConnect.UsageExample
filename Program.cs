@@ -208,26 +208,25 @@ file and a '*.ionipt' peaktable.
 
 Let's ask the API for a list of valid paths:
 ");
-var recipes = new ReadOnlyEmbeddedCollection<IndexedFile>(api, "/api/recipes")
-    .Select(file => file.Path)
-    .ToList();
+var recipeCollection = new ReadOnlyEmbeddedCollection<IndexedFile>(api, "/api/recipes");
 
-foreach (var choice in recipes.Select((path, i) => $"[{i}]: " + path))
+foreach (var choice in recipeCollection.Select((file, i) => $"[{i}]: " + file.Path))
 {
     Console.WriteLine(choice);
 }
 Console.WriteLine("\nselect a recipe by entering a number: ");
-int ix = int.Parse(Console.ReadKey(false).KeyChar.ToString());
+int recipeIndex = int.Parse(Console.ReadKey(false).KeyChar.ToString());
 Console.WriteLine();
-string recipe = recipes[ix];
+string recipe = recipeCollection.ElementAt(recipeIndex).Path;
 
 // first, check what's going on...
 jObject = api.GetJson("/api/measurements/current");
 
 // this call does not communicate errors and instead just gives us
-// a default object! Testing for '.HasValues' is a good way to check this:
-bool error = !jObject.HasValues;
-if (error)
+// a default object, when encountering an HTTP-error. This is just
+// what we would expect, when there is no 'current' measurement!
+// Testing for '.HasValues' is a good way to check this:
+if (!jObject.HasValues)
 {
     // so, the `GET /api/measurements/current` is [410: Gone]...
     Console.WriteLine("no measurement is currently running");
@@ -245,13 +244,19 @@ if (error)
         Console.WriteLine("\nthis didn't work... are you sure the recipe-directory exists?");
     }
 }
-else  // `GET /api/measurements/current` is [200: OK]...
-{
-    // ...what do we have running??
-    var meas = jObject.ToObject<IoniConnect.Models.Measurement>();
 
-    Console.WriteLine($"currently running recipe '{meas.RecipeDirectory}'");
+// ...then wait for the measurement to start:
+while (!jObject.HasValues)
+{
+    jObject = api.GetJson("/api/measurements/current");
+
+    Console.WriteLine("  -- still waiting for measurement to start -- ");
+    Thread.Sleep(1000);
 }
+
+var meas = jObject.ToObject<IoniConnect.Models.Measurement>() !;
+
+Console.WriteLine($"currently running recipe from '{meas.RecipeDirectory}'");
 
 
 /////////////////////////////////////////////////////////
@@ -264,11 +269,13 @@ this placeholder with the hyper-reference to the desired action.
 
 (that sounds more complicated than it is...)
 
-Note, that this won't work as intended on the DEMO configuration!!
+Note (DEMO): This WILL NOT work as intended on the DEMO configuration!!
 
-let's wait for 30 seconds for the measurement to continue...
+let's wait a couple of seconds for the measurement to initialize...
+Note the green status information on the bottom of the AME_launcher!
 ");
-Thread.Sleep(30 * 1000);
+Console.WriteLine("Press any key for the program to continue!");
+Console.ReadKey(true);
 
 // Note: this is not strictly neccessary, because it would be
 //  done by the AME-system, but if the "/pending" slot is occupied,
@@ -289,9 +296,10 @@ Console.WriteLine(@"
 
 we GET the current measurement and PUT the 'isRunning' property to false.
 
-let's wait for 30 seconds for the measurement to continue...
+let's wait a couple of seconds for the measurement...
 ");
-Thread.Sleep(30 * 1000);
+Console.WriteLine("Press any key for the program to continue!");
+Console.ReadKey(true);
 
 // again, check what's going on...
 jObject = api.GetJson("/api/measurements/current");
@@ -305,6 +313,12 @@ if (jObject.HasValues)
     r = api.SendJson(new HttpMethod("PATCH"), href, new { IsRunning = false });
 
     Console.WriteLine($"`PUT {href}` returned [{r.StatusCode}]");
+}
+
+while (api.GetJson("/api/measurements/current").HasValues)
+{
+    Console.WriteLine("  -- still waiting for measurement to stop -- ");
+    Thread.Sleep(1000);
 }
 
 /////////////////////////////////////////////////////////
