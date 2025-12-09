@@ -18,6 +18,11 @@
 //                                                            //
 // Version history:                                           //
 //                                                            //
+// v5 -  9.Dez 2025                                           //
+//  * changed: api.GetFile() / .SendFile() takes 'query'      //
+//    as *last* argument, consistent with all other API calls //
+//  * update IoniConnect.nupgk v1.0.9                         //
+//                                                            //
 // v4 -  7.Oct 2025                                           //
 //  * changed: use a PATCH request to stop a measurement      //
 //                                                            //
@@ -332,7 +337,7 @@ if (jObject.HasValues)
 {
     href = jObject["_links"]["self"]["href"].ToObject<string>();  // href should be "/api/measurements/X/results/Y"
 
-    api.GetFile(href + "/download", query: "exclude=*.h5", "./result.zip");  // use "exclude=*.h5&exclude=*.tsv" for more exclusions
+    api.GetFile(href + "/download", "./result.zip", query: "exclude=*.h5");  // use "exclude=*.h5&exclude=*.tsv" for more exclusions
 
     Console.WriteLine("Result files saved as " + Directory.GetCurrentDirectory() + "\\result.zip");
 
